@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+
+# A NixOps Wrapper for Git Projects
+# ---------------------------------
+#
+# Repo: https://github.com/grafted-in/nixops-manager
+#
+# This tool is a simple wrapper around NixOps. The goal is to make it easier to use NixOps when you
+# want to share your deployment state between members of a team.
+#
+# To achieve this, this wrapper gives every deployment as a separate state file which is placed
+# in the same directory as this script. The files have the `.nixops` extension.
+#
+# You are expected to keep these files in version control. It's also *highly* recommended that you
+# use a tool like git-crypt to keep them encrypted with this entry in .gitattributes:
+#
+#    *.nixops   binary filter=git-crypt diff=git-crypt
+#
+# This tool also enforces a per-repository version of Nixpkgs via a `nixpkgs-version.sh` file in the
+# same directory as the script. This ensures that all users have a consistent version of NixOps and
+# deploy a consistent set of packages to servers.
+#
+# Most commands work identically to NixOps. However, instead of specifying deployments with
+# the `--deployment/-d` flag, you select a deployment in the first argument. In other words, instead
+# of the normal NixOps usage of
+#
+#   nixops deploy -d stage --check  # Normal nixops usage.
+#
+# You'd run:
+#
+#   ./manage stage deploy --check   # Manage script usage.
+#
+# This assume there is a file ./stage.nixops where this state is being stored.
+#
+# Use `./manage --help` to see normal NixOps help.
+# Use `./manage {deployment} .shell` to open a Nix shell where the environment is set up to use
+# `nixops` directly with the same behavior as running `./manage` commands.
+
+set -e
+
+# Check for Nix tools.
+command -v nix-shell >/dev/null 2>&1 || {
+  nix_profile="$HOME/.nix-profile/etc/profile.d/nix.sh"
+  if [ -e "$nix_profile" ]; then
+    source "$nix_profile"
+  else
+    >&2 echo "Failed to find 'nix-shell' on PATH or a Nix profile to load. Have you installed Nix?"
+    exit 1
+  fi
+}
+
+here=$(dirname "$0")
+repo_root=$(git rev-parse --show-toplevel)  # Use Git to find repo root.
+
+deployment="$1"
+command="$2"
+state_file="$here/${deployment}.nixops"
+
+source "$here/nixpkgs-version.sh"
+
+export NIX_PATH=nixpkgs="$nixpkgs_snapshot":"$repo_root":.
+export NIXOPS_STATE="$state_file"
+export NIXOPS_DEPLOYMENT="$deployment"
+export SSH_AUTH_SOCK=''  # Don't use SSH keyring since we get everything from the state file.
+
+withNixops="nix-shell -p $nixops_version --run"
+
+# Arg list trick:
+# https://stackoverflow.com/questions/3104209
+# ARGS=$(printf "%q"" " "$@")
+
+if [[ $deployment == --* ]]; then
+  ARGS=$(printf "%q"" " "$@")
+  $withNixops "nixops $ARGS"
+  exit $?
+elif [ "$command" == ".shell" ]; then
+  nix-shell -p "$nixops_version"
+elif [ ! -e "$state_file" ] && [ "$command" != "create" ]; then
+  >&2 echo "You're trying to use a deployment that doesn't exist yet. Try running $0 $deployment create"
+  exit 1
+else
+  ARGS=$(printf "%q"" " "${@:2}")
+  $withNixops "nixops $ARGS"
+fi
