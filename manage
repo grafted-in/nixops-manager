@@ -61,7 +61,6 @@ source "$here/nixpkgs-version.sh"
 export NIX_PATH=nixpkgs="$nixpkgs_snapshot":"$repo_root":.
 export NIXOPS_STATE="$state_file"
 export NIXOPS_DEPLOYMENT="$deployment"
-export SSH_AUTH_SOCK=''  # Don't use SSH keyring since we get everything from the state file.
 
 withNixops="nix-shell -p $nixops_version --run"
 
@@ -77,6 +76,9 @@ elif [ "$command" == ".shell" ]; then
   nix-shell -p "$nixops_version"
 elif [ ! -e "$state_file" ] && [ "$command" != "create" ]; then
   >&2 echo "You're trying to use a deployment that doesn't exist yet. Try running $0 $deployment create"
+  exit 1
+elif [ -e "$state_file" ] && [ "$command" == "create" ]; then
+  >&2 echo "You're trying to create a deployment that already exists."
   exit 1
 else
   ARGS=$(printf "%q"" " "${@:2}")
