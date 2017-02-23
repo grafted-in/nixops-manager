@@ -50,7 +50,7 @@ command -v nix-shell >/dev/null 2>&1 || {
 }
 
 here=$(dirname "$0")
-repo_root=$(git rev-parse --show-toplevel)  # Use Git to find repo root.
+repo_root=$(cd "$here" && git rev-parse --show-toplevel)  # Use Git to find repo root.
 
 deployment="$1"
 command="$2"
