@@ -49,7 +49,7 @@ command -v nix-shell >/dev/null 2>&1 || {
   fi
 }
 
-here=$(dirname "$0")
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 repo_root=$(cd "$here" && git rev-parse --show-toplevel)  # Use Git to find repo root.
 
 deployment="$1"

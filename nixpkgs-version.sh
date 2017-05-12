@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-export nixpkgs_channel="https://nixos.org/channels/nixpkgs-unstable"
-export nixpkgs_snapshot="https://d3g5gsiof5omrk.cloudfront.net/nixpkgs/nixpkgs-17.03pre98765.6043569/nixexprs.tar.xz"
-export nixops_version="nixops"  # Use the packaged nixops
+
+here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+
+nixpkgs_snapshot=$(eval echo "$(nix-instantiate --eval -E "(import \"$here/nixpkgs-version.nix\").url")")
+export nixpkgs_snapshot
+export nixops_version="nixops"
 
 # Or you can use a more recent build of nixops:
 #if [ "$(uname)" == "Darwin" ]; then
