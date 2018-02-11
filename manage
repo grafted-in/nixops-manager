@@ -58,7 +58,10 @@ state_file="$here/${deployment}.nixops"
 
 source "$here/nixpkgs-version.sh"
 
-export NIX_PATH=nixpkgs="$nixpkgs_snapshot":"$repo_root":.
+function colon(){
+    echo ${1:+${1}:}
+}
+export NIX_PATH=nixpkgs="$(colon $nixpkgs_cache)$(colon $nixpkgs_snapshot)$repo_root":.
 export NIXOPS_STATE="$state_file"
 export NIXOPS_DEPLOYMENT="$deployment"
 

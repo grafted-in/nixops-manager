@@ -3,7 +3,9 @@
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 nixpkgs_snapshot=$(eval echo "$(nix-instantiate --eval -E "(import \"$here/nixpkgs-version.nix\").url")")
+nixpkgs_cache=$(eval echo "$(nix-instantiate --eval -E "(import \"$here/nixpkgs-version.nix\").cache")")
 export nixpkgs_snapshot
+export nixpkgs_cache
 export nixops_version="nixops"
 
 # Or you can use a more recent build of nixops:
