@@ -1,36 +1,16 @@
 #! /usr/bin/env nix-shell
-#! nix-shell -i bash -p nixopsUnstable which jq nix openssl openssh
-#! nix-shell -p "(import ./nixpkgs.nix)"
+#! nix-shell -I nixpkgs-overlays=./overlays
+#! nix-shell -I nixpkgs=https://github.com/NixOS/nixpkgs/archive/f7f1a2f54ef2b744a26e37418dd6354bc46aa20a.tar.gz
+#! nix-shell -i bash -p nixopsUnstable3 which jq nix openssl openssh
+
 
 # A NixOps Wrapper for Git Projects
 # ---------------------------------
-#
 # Modified from repo: https://github.com/grafted-in/nixops-manager
-#
-# This tool is a simple wrapper around NixOps. The goal is to make it easier to use NixOps when you
-# want to share your deployment state between members of a team.
-#
-# To achieve this, this wrapper gives every deployment as a separate state file which is placed
-# in a sub-directory of this script. The files have the `.nixops` extension.
-#
-# You are expected to keep these files in version control. It's also *highly* recommended that you
-# use a tool like git-crypt to keep them encrypted with this entry in .gitattributes:
-#
-#    *.nixops   binary filter=git-crypt diff=git-crypt
-#
-# Most commands work identically to NixOps. However, instead of specifying deployments with
-# the `--deployment/-d` flag, you select a deployment in the first argument. In other words, instead
-# of the normal NixOps usage of
-#
-#   nixops deploy -d stage --check  # Normal nixops usage.
-#
-# You'd run:
-#
-#   ./manage stage deploy --check   # Manage script usage.
-#
-# This assume there is a file ./stage/stage.nixops where this state is being stored.
+# This assumes there is a file ./stage/stage.nixops where this state is being stored.
 #
 # Use `./manage --help` to see normal NixOps help.
+# Use `./manage {deployment} command` to user normal NixOps commands.
 # Use `./manage {deployment} .shell` to open a Nix shell where the environment is set up to use
 # `nixops` directly with the same behavior as running `./manage` commands.
 
@@ -42,21 +22,17 @@ deployment="$1"
 command="$2"
 state_file="$here/${deployment}/${deployment}.nixops"
 
-function colon(){
-    echo ${1:+${1}:}
-}
-export NIX_PATH=nixpkgs=$(nix-instantiate --eval ./nixpkgs.nix | tr -d '"' ):./${deployment}
-
+export NIX_PATH=nixpkgs-overlays=./overlays:nixpkgs=$(nix-instantiate --eval ./nixpkgs.nix | tr -d '"' ):./${deployment}
 
 export NIXOPS_STATE="$state_file"
 export NIXOPS_DEPLOYMENT="$deployment"
-export nixops_version="nixopsUnstable"
+export BOTO_USE_ENDPOINT_HEURISTICS=True
 
 if [[ $deployment == --* ]]; then
   nixops "$@"
   exit $?
 elif [ "$command" == ".shell" ]; then
-    nix-shell -p "$nixops_version" --command "echo You may now run commands for deployment:$deploymnet with \\'nixops\\' ; return "
+    exec nix-shell -p nixopsUnstable3 --command "echo You may now run commands for deployment:$deploymnet with \\'nixops\\' ; return "
 elif [ ! -e "$state_file" ] && [ "$command" != "create" ]; then
   >&2 echo "You're trying to use a deployment that doesn't exist yet. Try running $0 $deployment create"
   exit 1
