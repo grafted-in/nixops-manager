@@ -35,7 +35,7 @@ You'd run:
 ./manage stage deploy --check   # Manage script usage.
 ```
 
-This assume there is a file `./stage.nixops` where this state is being stored.
+This assume there is a file `./stage/stage.nixops` where this state is being stored.
 
 Use `./manage --help` to see normal NixOps help.
 Use `./manage {deployment} .shell` to open a Nix shell where the environment is set up to use
